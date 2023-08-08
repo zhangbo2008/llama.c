@@ -601,7 +601,7 @@ int main(int argc, char *argv[]) {
         checkpoint_init_weights(&weights, &config, weights_ptr, shared_weights);
     }
     // right now we cannot run for more than config.seq_len steps
-    if (steps <= 0 || steps > config.seq_len) { steps = config.seq_len; }
+    if (steps <= 0 || steps > config.seq_len) { steps = config.seq_len; }// steps是生成多少个文字, 也就是循环生成多少轮次.
 
     // read in the tokenizer.bin file
     char** vocab = (char**)malloc(config.vocab_size * sizeof(char*));

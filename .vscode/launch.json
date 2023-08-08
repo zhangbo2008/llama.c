@@ -10,7 +10,7 @@
             "type": "cppdbg",
             "request": "launch",
             "program": "${workspaceFolder}/a",
-            "args": ["stories15M.bin"],
+            "args": ["stories15M.bin","-i","I have a dream"],
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}",
             "environment": [],

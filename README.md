@@ -2,6 +2,8 @@
 1. 训练代码1.py
 2.  gcc -O0 -o a 2.c -lm   -g
 3.  直接运行debug即可. 就进入了2.c的debug模式.进行学习.
+    参数配置在launch.json里面 "args": ["stories15M.bin","-i","I have a dream"],
+    最后一个参数是prompt
 
 
 

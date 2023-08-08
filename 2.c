@@ -1,10 +1,10 @@
 // 2.c 这是是代码第二个部分, 用c语言来进行推理.这个就是这个代码仓库的核心代码, 因为改变成了c代码, 所以这个llm模型可以跑在嵌入是了. 并且这里面不使用任何库包. 方便使用.居然六百行就写完了.
-
+// gcc -O0 -o a 2.c -lm   -g
 /*
 Inference for Llama-2 Transformer model in pure C.
 
 Example compile: (see README for more details)
-$ gcc -O3 -o run run.c -lm     # 因为使用了math函数所以要加lm进行编译.
+ # 因为使用了math函数所以要加lm进行编译.
 
 Then run with:
 $ ./run
@@ -43,7 +43,7 @@ typedef struct {
     int seq_len; // max sequence length
 } Config;
 
-typedef struct {
+typedef struct {// 底层都用一维数组来存所有的tensor
     // token embedding table
     float* token_embedding_table;    // (vocab_size, dim)
     // weights for rmsnorms
@@ -90,7 +90,7 @@ typedef struct {
     float* value_cache; // (layer, seq_len, dim)
 } RunState;
 
-void malloc_run_state(RunState* s, Config* p) {
+void malloc_run_state(RunState* s, Config* p) { // 根据参数p, 把s进行calloc初始化.
     // we calloc instead of malloc to keep valgrind happy
     s->x = calloc(p->dim, sizeof(float));
     s->xb = calloc(p->dim, sizeof(float));
@@ -142,9 +142,9 @@ void free_run_state(RunState* s) {
 // initialization: read from checkpoint
 
 void checkpoint_init_weights(TransformerWeights *w, Config* p, float* f, int shared_weights) {
-    float* ptr = f;
+    float* ptr = f;  // f是权重向量. 参考model.py:340行.
     w->token_embedding_table = ptr;
-    ptr += p->vocab_size * p->dim;
+    ptr += p->vocab_size * p->dim;      //  model.py:358行对应.
     w->rms_att_weight = ptr;
     ptr += p->n_layers * p->dim;
     w->wq = ptr;
@@ -176,18 +176,20 @@ void checkpoint_init_weights(TransformerWeights *w, Config* p, float* f, int sha
 // ---------------------------------3网络结构-------------------------------------------
 // neural net blocks
 
-void accum(float *a, float *b, int size) {
+void accum(float *a, float *b, int size) {//两个张量相加.
     for (int i = 0; i < size; i++) {
         a[i] += b[i];
     }
 }
+
+
 
 void rmsnorm(float* o, float* x, float* weight, int size) {
     // calculate sum of squares
     float ss = 0.0f;
     for (int j = 0; j < size; j++) {
         ss += x[j] * x[j];
-    }
+    } //内积
     ss /= size;
     ss += 1e-5f;
     ss = 1.0f / sqrtf(ss);
@@ -196,6 +198,19 @@ void rmsnorm(float* o, float* x, float* weight, int size) {
         o[j] = weight[j] * (ss * x[j]);
     }
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 void softmax(float* x, int size) {
     // find max value (for numerical stability)
@@ -213,15 +228,15 @@ void softmax(float* x, int size) {
     }
     // normalize
     for (int i = 0; i < size; i++) {
-        x[i] /= sum;
+        x[i] /= sum;  //因为x[i]已经都除以同一个expf(max_val)了.所以这么算是对的.
     }
 }
-
+//矩阵乘法.
 void matmul(float* xout, float* x, float* w, int n, int d) {
     // W (d,n) @ x (n,) -> xout (d,)
     // by far the most amount of time is spent inside this little function
-    int i;
-    #pragma omp parallel for private(i)
+    int i;   //并行for #pragma omp parallel for
+    #pragma omp parallel for private(i)   //循环加上这句话会并行.
     for (i = 0; i < d; i++) {
         float val = 0.0f;
         for (int j = 0; j < n; j++) {
@@ -231,6 +246,9 @@ void matmul(float* xout, float* x, float* w, int n, int d) {
     }
 }
 
+
+
+//最复杂就这个了.
 void transformer(int token, int pos, Config* p, RunState* s, TransformerWeights* w) {
 
     // a few convenience variables
@@ -247,14 +265,14 @@ void transformer(int token, int pos, Config* p, RunState* s, TransformerWeights*
     float* freq_cis_real_row = w->freq_cis_real + pos * head_size / 2;
     float* freq_cis_imag_row = w->freq_cis_imag + pos * head_size / 2;
 
-    // forward all the layers
+    // forward all the layers // s表示每一个计算图中的状态.
     for(int l = 0; l < p->n_layers; l++) {
 
         // attention rmsnorm
         rmsnorm(s->xb, x, w->rms_att_weight + l*dim, dim);
 
         // qkv matmuls for this position
-        matmul(s->q, s->xb, w->wq + l*dim*dim, dim, dim);
+        matmul(s->q, s->xb, w->wq + l*dim*dim, dim, dim); // 矩阵s 跟w乘
         matmul(s->k, s->xb, w->wk + l*dim*dim, dim, dim);
         matmul(s->v, s->xb, w->wv + l*dim*dim, dim, dim);
 

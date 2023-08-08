@@ -1,3 +1,18 @@
+
+1. 训练代码1.py
+2.  gcc -O0 -o a 2.c -lm   -g
+3.  直接运行debug即可. 就进入了2.c的debug模式.进行学习.
+
+
+
+
+
+
+
+
+
+
+
 ## llama2.c
 
 <p align="center">

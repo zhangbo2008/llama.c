@@ -336,23 +336,23 @@ class Transformer(nn.Module):
             idx = torch.cat((idx, idx_next), dim=1)
 
         return idx
-
+#================非常中药函数,!!!!!把python里面的数据存成.bin的数据,给C用!!!!!!!!!!!!!!!!!!
     def export(self, filepath='model.bin'):
         """export the model weights in fp32 into .bin file to be read from C"""
         f = open(filepath, 'wb')
 
         def serialize(t):
             d = t.detach().cpu().view(-1).numpy().astype(np.float32)
-            b = struct.pack(f'{len(d)}f', *d)
+            b = struct.pack(f'{len(d)}f', *d)  # struct.pack struct.pack用于将Python的值根据格式符,转换为字符串
             f.write(b)
 
         # first write out the header
-        hidden_dim = self.layers[0].feed_forward.w1.weight.shape[0]
+        hidden_dim = self.layers[0].feed_forward.w1.weight.shape[0] # 拿到维度
         p = self.params
         n_kv_heads = p.n_heads if p.n_kv_heads is None else p.n_kv_heads
         header = struct.pack('iiiiiii', p.dim, hidden_dim, p.n_layers, p.n_heads,
                                        n_kv_heads, p.vocab_size, p.max_seq_len)
-        f.write(header)
+        f.write(header)#==========================第一步,写入7个整数.
 
         # next write out the embedding weights
         serialize(self.tok_embeddings.weight)
